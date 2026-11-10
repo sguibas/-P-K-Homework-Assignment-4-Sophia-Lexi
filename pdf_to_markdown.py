@@ -4,8 +4,6 @@ import argparse
 import base64
 import os
 from pathlib import Path
-import shutil
-import subprocess
 import sys
 import tempfile
 from time import perf_counter
@@ -30,21 +28,44 @@ Transcribe visible content faithfully without filling in missing details.
 
 
 def render_pages(pdf, directory, dpi, max_pages):
-    command = ["pdftoppm", "-r", str(dpi), "-png"]
-    if max_pages is not None:
-        command.extend(["-l", str(max_pages)])
-    result = subprocess.run(
-        [*command, str(pdf), str(directory / "page")],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise ValueError(result.stderr.strip() or "PDF rendering failed.")
-    pages = sorted(
-        directory.glob("page-*.png"),
-        key=lambda path: int(path.stem.split("-")[-1]),
-    )
+    try:
+        import pypdfium2 as pdfium
+    except ImportError as exc:
+        raise ValueError(
+            "Install dependencies with python -m pip install -r requirements.txt."
+        ) from exc
+
+    document = None
+    pages = []
+    try:
+        document = pdfium.PdfDocument(str(pdf))
+        page_count = len(document)
+        if max_pages is not None:
+            page_count = min(page_count, max_pages)
+        scale = dpi / 72.0  # PDF page coordinates are measured at 72 points per inch.
+
+        for page_index in range(page_count):
+            page = document[page_index]
+            try:
+                bitmap = page.render(scale=scale)
+                try:
+                    image = bitmap.to_pil()
+                finally:
+                    bitmap.close()
+                image_path = directory / f"page-{page_index + 1:04d}.png"
+                try:
+                    image.save(image_path, format="PNG")
+                finally:
+                    image.close()
+                pages.append(image_path)
+            finally:
+                page.close()
+    except Exception as exc:
+        raise ValueError(f"PDF rendering failed: {exc}") from exc
+    finally:
+        if document is not None:
+            document.close()
+
     if not pages:
         raise ValueError("The PDF rendered zero pages.")
     return pages
@@ -91,8 +112,6 @@ def main():
         parser.error("Choose a separate .md output file.")
     if not args.output.parent.is_dir() or args.output.is_dir():
         parser.error("Choose a Markdown file in an existing output folder.")
-    if not shutil.which("pdftoppm"):
-        parser.error("Install Poppler and make pdftoppm available in your terminal.")
     if not os.environ.get("OPENAI_API_KEY"):
         parser.error("Set OPENAI_API_KEY in your terminal before running the parser.")
 

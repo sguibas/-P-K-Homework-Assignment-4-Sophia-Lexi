@@ -1,6 +1,6 @@
 # Option C PDF parser
 
-A Python prototype that renders a PDF to page images with Poppler. It sends one
+A Python prototype that renders a PDF to page images with pypdfium2. It sends one
 image per request to the OpenAI Responses API and combines the returned Markdown
 with numbered HTML comments. The prompt asks for headings, lists, tables,
 callouts, and LaTeX math in reading order.
@@ -10,17 +10,16 @@ callouts, and LaTeX math in reading order.
 Open this folder in VS Code. Open the integrated terminal and run:
 
 ```sh
-brew install poppler
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 mkdir -p runs
 ```
 
-Skip the Homebrew command if `pdftoppm` is already on your PATH. Open the
-[Codex extension](https://learn.chatgpt.com/docs/codex/ide) sidebar to work on
-the code. The parser needs an OpenAI API key with model access for its own
-requests. Enter the key in the terminal with input hidden:
+PDF rendering is provided by pypdfium2, so no separate Poppler installation is
+needed. Open the [Codex extension](https://learn.chatgpt.com/docs/codex/ide)
+sidebar to work on the code. The parser needs an OpenAI API key with model
+access for its own requests. Enter the key in the terminal with input hidden:
 
 ```sh
 printf 'OpenAI API key: '
