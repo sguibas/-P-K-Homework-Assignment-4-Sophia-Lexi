@@ -35,7 +35,11 @@ The model calls use API credits and send rendered pages to OpenAI. Use the
 included synthetic PDF for the first run. Only use work documents when you have
 permission to send them to the API.
 
-The terminal shows model, render DPI, latency, and token counts. To compare
+The terminal shows the model, render DPI, per-page latency and token counts,
+total rendering/API/run time, and an estimated API token cost. The estimate uses
+the standard GPT-5.4 mini rates checked on November 10, 2026; actual billing can
+differ if rates or account settings change. For a `--model` override, the parser
+reports token usage but asks you to check that model's current rates. To compare
 settings, rerun with `--dpi 240` or `--model MODEL_ID` and save the results to a
 different Markdown file. Use `--max-pages 1` for a one-page trial.
 
@@ -47,12 +51,17 @@ different Markdown file. Use `--max-pages 1` for a one-page trial.
 - **Page 2** contains inline math, a stacked fraction, a square root, scripts,
   and equation numbers. Check that the grouping and the labels survive.
 - Compare the PDF, the output, and `fixtures/reference.md`. The evaluator
-  checks heading/list/table/callout order and counts matching and unexpected
-  LaTeX expressions per page. Its diff helps spot omissions and invented text.
-  It exits with status 1 for any diff, including harmless reformatting. Judge
-  math equivalence and actual errors by eye before recording results.
+  reports normalized WER/CER, reading-order precision/recall/F1, table cell and
+  grid scores, equation precision/recall/F1, and a line diff. Text normalization
+  ignores case, punctuation, Markdown markers, and dollar-delimited math;
+  equations are compared separately by normalized LaTeX text, not mathematical
+  equivalence. Extra words mean extra relative to the reference, so verify them
+  against the PDF before calling them hallucinations. It exits with status 1 for
+  a detected text or structure difference, including harmless reformatting.
 
-To verify the evaluator itself without an API key, run
-`python evaluate.py fixtures/reference.md`. For a team comparison, record the
-model and DPI alongside specific missed, changed, or invented content, latency,
-and token counts. This fixture is a two-page smoke test.
+To check the evaluator's formatting and report output without an API key, run
+`python evaluate.py fixtures/reference.md`. This compares the reference with
+itself; it does not measure model extraction accuracy. For a team comparison,
+use the same PDFs and human-checked references for every approach, and record
+the exact model, DPI, parser version, error examples, timing, tokens, and cost.
+This fixture is a two-page smoke test.
